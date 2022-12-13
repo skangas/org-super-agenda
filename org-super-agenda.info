@@ -148,7 +148,6 @@ If you want to install manually, you must also install these packages:
    • ‘dash’ >= 2.13
    • ‘ht’ >=2.2
    • ‘org-mode’ >= 9.0
-   • ‘s’ >= 1.10
    • ‘ts’
 
    Then put ‘org-super-agenda.el’ in your ‘load-path’, and eval

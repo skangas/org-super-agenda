@@ -13,7 +13,6 @@
 
 (require 'ht)
 (require 'f)
-(require 's)
 
 ;;;; Variables
 
@@ -430,7 +429,7 @@ already loaded."
           (format-time-string (lambda (format-string &optional time zone)
                                 (if time
                                     (format-time-string-orig format-string time zone)
-                                  (concat (cl-second (s-split " " ,date)) " "))))
+                                  (concat (cl-second (split-string ,date " ")) " "))))
           (frame-width (lambda (&rest _ignore)
                          134))
           (window-width (lambda (&rest _ignore)
@@ -745,7 +744,7 @@ already loaded."
   ;; DONE: Works.
   (should (org-super-agenda-test--run
            :groups '((:pred (lambda (item)
-                              (s-contains? "moon" item)))))))
+                              (string-match-p "moon" item)))))))
 
 (ert-deftest org-super-agenda-test--:property-only ()
   ;; DONE: Works.

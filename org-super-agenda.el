@@ -3,7 +3,7 @@
 ;; Author: Adam Porter <adam@alphapapa.net>
 ;; Url: http://github.com/alphapapa/org-super-agenda
 ;; Version: 1.3-pre
-;; Package-Requires: ((emacs "26.1") (s "1.10.0") (dash "2.13") (org "9.0") (ht "2.2") (ts "0.2"))
+;; Package-Requires: ((emacs "26.1") (dash "2.13") (org "9.0") (ht "2.2") (ts "0.2"))
 ;; Keywords: hypermedia, outlines, Org, agenda
 
 ;;; Commentary:
@@ -109,7 +109,6 @@
 (require 'org-habit)
 (require 'cl-lib)
 (require 'dash)
-(require 's)
 (require 'ht)
 (require 'seq)
 (require 'ts)
@@ -554,7 +553,7 @@ COMPARISON should be a symbol, one of: `past' or `before',
   `(org-super-agenda--defgroup ,(intern (concat "effort" (symbol-name name)))
      ,(concat docstring "\nArgument is a time-duration string, like \"5\" or \"0:05\" for 5 minutes.")
      :section-name (concat "Effort " ,(symbol-name name) " "
-                           (s-join " or " args) " items")
+                           (string-join " or " args) " items")
      :let* ((effort-minutes (org-duration-string-to-minutes (car args))))
      :test (when-let ((item-effort (org-find-text-property-in-string 'effort item)))
              (,comparator (org-duration-string-to-minutes item-effort) effort-minutes))))
@@ -616,16 +615,16 @@ Argument can be `t' to match items from files at any
 path (i.e. all items from file-backed buffers), `nil' to match
 items from non-file-backed buffers, or one or a list of regexp
 strings to match against file paths."
-  :section-name (concat "File path: " (s-join " OR " args))
+  :section-name (concat "File path: " (string-join " OR " args))
   :test (-when-let* ((marker (or (get-text-property 0 'org-marker item)
                                  (get-text-property 0 'org-hd-marker item)))
                      (file-path (->> marker marker-buffer buffer-file-name)))
           (pcase args
             ('t t)
             ('nil nil)
-            ((pred stringp) (s-matches? args file-path))
+            ((pred stringp) (string-match-p args file-path))
             (_ (cl-loop for path in args
-                        thereis (s-matches? path file-path))))))
+                        thereis (string-match-p path file-path))))))
 
 (org-super-agenda--defgroup log
   "Group Agenda Log Mode items.
@@ -664,9 +663,9 @@ Argument may be a string or list of strings, each of which should
 be a regular expression.  You'll probably want to override the
 section name for this group."
   :section-name (concat "Headings matching regexps: "
-                        (s-join " OR "
-                                (--map (s-wrap it "\"")
-                                       args)))
+                        (string-join " OR "
+                                     (--map (concat "\"" it "\"")
+                                            args)))
   :let* ((case-fold-search t))
   :test (org-super-agenda--when-with-marker-buffer (org-super-agenda--get-marker item)
           (let ((heading (org-get-heading 'no-tags 'no-todo)))
@@ -693,7 +692,7 @@ available."
                                                    ;; FIXME: What if the lambda's byte-compiled?
                                                    (`(lambda . ,_) "Lambda")
                                                    ((pred functionp) (symbol-name arg))
-                                                   ((pred listp) (s-join " OR " (-map #'to-string arg))))))
+                                                   ((pred listp) (string-join " OR " (-map #'to-string arg))))))
                             (to-string args))))
   :test (pcase args
           ((pred functionp) (funcall args item))
@@ -734,9 +733,9 @@ Argument may be a string or list of strings, each of which should
 be a regular expression.  You'll probably want to override the
 section name for this group."
   :section-name (concat "Items matching regexps: "
-                        (s-join " OR "
-                                (--map (s-wrap it "\"")
-                                       args)))
+                        (string-join " OR "
+                                     (--map (concat "\"" it "\"")
+                                            args)))
   :let* ((case-fold-search t))
   :test (when-let ((entry (org-super-agenda--get-item-entry item)))
           (cl-loop for regexp in args
@@ -745,13 +744,13 @@ section name for this group."
 (org-super-agenda--defgroup tag
   "Group items that match any of the given tags.
 Argument may be a string or list of strings."
-  :section-name (concat "Tags: " (s-join " OR " args))
+  :section-name (concat "Tags: " (string-join " OR " args))
   :test (seq-intersection (org-super-agenda--get-tags item) args 'cl-equalp))
 
 (org-super-agenda--defgroup category
   "Group items that match any of the given categories.
 Argument may be a string or list of strings."
-  :section-name (concat "Items categorized as: " (s-join " OR " args))
+  :section-name (concat "Items categorized as: " (string-join " OR " args))
   :test (cl-member (org-super-agenda--get-category item)
                    args :test #'string=))
 
@@ -761,8 +760,8 @@ Argument may be a string or list of strings, or `t' to match any
 keyword, or `nil' to match only non-todo items."
   :section-name (pcase (car args)
                   ((pred stringp) ;; To-do keyword given
-                   (concat (s-join " and " (--map (propertize it 'face (org-get-todo-face it))
-                                                  args))
+                   (concat (string-join " and " (--map (propertize it 'face (org-get-todo-face it))
+                                                       args))
                            " items"))
                   ('t ;; Test for any to-do keyword
                    "Any TODO keyword")
@@ -786,7 +785,7 @@ keyword, or `nil' to match only non-todo items."
   "Group items that match any of the given priorities.
 Argument may be a string or list of strings, which should be,
 e.g. \"A\" or (\"B\" \"C\")."
-  :section-name (concat "Priority " (s-join " and " args) " items")
+  :section-name (concat "Priority " (string-join " and " args) " items")
   :test (cl-member (org-super-agenda--get-priority-cookie item) args :test 'string=))
 
 (cl-defmacro org-super-agenda--defpriority-group (name docstring &key comparator)
@@ -796,7 +795,7 @@ e.g. \"A\" or (\"B\" \"C\")."
 strings, in which case only the first will be used.
 The string should be the priority cookie letter, e.g. \"A\".")
      :section-name (concat "Priority " ,(symbol-name name) " "
-                           (s-join " or " args) " items")
+                           (string-join " or " args) " items")
      :let* ((priority-number (string-to-char (car args))))
      :test (let ((item-priority (org-super-agenda--get-priority-cookie item)))
              (when item-priority
@@ -999,7 +998,7 @@ of the arguments to the function."
   "their tags"
   :keyword :auto-tags
   :key-form (--when-let (org-super-agenda--get-tags item)
-              (->> it (-sort #'string<) (s-join ", ")
+              (->> it (-sort #'string<) (string-join ", ")
                    (concat "Tags: ")))
   :key-sort-fn string<)
 
@@ -1075,7 +1074,7 @@ of the arguments to the function."
 
 (org-super-agenda--def-auto-group outline-path "their outline paths"
   :key-form (org-super-agenda--when-with-marker-buffer (org-super-agenda--get-marker item)
-              (s-join "/" (org-get-outline-path))))
+              (string-join "/" (org-get-outline-path))))
 
 (org-super-agenda--def-auto-group parent "their parent heading"
   :key-form (org-super-agenda--when-with-marker-buffer (org-super-agenda--get-marker item)
@@ -1117,7 +1116,7 @@ see."
            and collect auto-section-name into names
            and do (setq items non-matching)
            for name = (if (stringp (car names))
-                          (s-join " and " (-non-nil names))
+                          (string-join " and " (-non-nil names))
                         ;; Probably an :auto-group
                         (car names))
            finally return (list name items all-matches)))
@@ -1147,7 +1146,7 @@ see."
            ;; Now for the AND
            finally do (setq final-matches (cl-reduce 'seq-intersection all-matches))
            finally do (setq final-non-matches (seq-difference all-items final-matches))
-           finally return (list (s-join " AND " (-non-nil names))
+           finally return (list (string-join " AND " (-non-nil names))
                                 final-non-matches
                                 final-matches)))
 (setq org-super-agenda-group-types (plist-put org-super-agenda-group-types
@@ -1191,7 +1190,7 @@ Any groups processed after this will not see these items."
            append matching into all-matches
            and collect auto-section-name into names
            and do (setq items non-matching)
-           finally return (list (s-join " and " (-non-nil names))
+           finally return (list (string-join " and " (-non-nil names))
                                 items
                                 nil)))
 (setq org-super-agenda-group-types (plist-put org-super-agenda-group-types
@@ -1227,7 +1226,7 @@ STRING should be that returned by `org-agenda-finalize-entries'"
        (split-string it "\n" 'omit-nulls)
        org-super-agenda--group-items
        (-remove #'s-blank-str? it)
-       (s-join "\n" it)
+       (string-join "\n" it)
        (concat it (cl-etypecase org-super-agenda-final-group-separator
                     (character (concat "\n" (make-string (window-width) org-super-agenda-final-group-separator)))
                     (string org-super-agenda-final-group-separator)))))

@@ -34,7 +34,7 @@ EMACS="${EMACS:=emacs}"
 # (setq debug-on-error t))"
 
 # PACKAGES_NEEDED="
-# (cl-loop for package in '(ht f s dash)
+# (cl-loop for package in '(ht f dash)
 #          unless (package-installed-p package)
 #          do (package-install package))"
 
